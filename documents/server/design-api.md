@@ -138,3 +138,30 @@ OrderView新增itemName、itemDescription、snapshotSource（AT_CREATION/LEGACY_
 ADMIN `GET /audit?page=0&size=20`：分页`{id,createTime,traceId,actorHash,action,resourceHash,outcome,httpStatus}`，哈希字段不是明文账号或地址。Actuator独立沿用标准响应而非Api envelope，全部要求ADMIN；自动OpenAPI也为标准OpenAPI格式。失败CORS预检由框架403拒绝，不含业务对象。监控与限制见[运行说明](operations.md)。
 
 前端增量适配：购物车保留version并按卖家展示checkout返回的orders/lines；幂等重试沿用原cartVersion和幂等键。支付页显示SIMULATOR且查询独立支付记录，不由客户端提交成功标志；售后和结算分别展示独立记录、FAILED重试及负数调整。大金额使用保留整数精度的JSON解析，不能用Number累加超过2^53的账务。401重新登录、409刷新业务数据、429按Retry-After重试，排障向维护者提供traceId；不展示服务器内部异常。
+
+
+## 卖家售后收件箱（2026-10-27）
+
+所有路径均以 `/api/v1` 为前缀，使用现有 Bearer 认证和 Api 返回结构。本次为追加接口，无数据库迁移，不修改已有申请/审核/资金与库存规则。
+
+### GET `/refunds`
+
+分页发现售后申请，卖家无需向买家索取编号。
+
+| 参数 | 类型与默认值 | 说明 |
+| --- | --- | --- |
+| scope | seller（默认）/buyer/all | seller只查当前账号销售订单，buyer只查当前账号购买订单，all仅ADMIN可用。ADMIN默认仍是seller，查看全局需显式all。 |
+| status | 可选字符串 | REQUESTED、APPROVED、FAILED、SUCCEEDED、REJECTED；省略表示全部状态。 |
+| orderId | 可选正Long | 在当前权限范围内按订单过滤，不能绕过scope。 |
+| page | 0..1000000，默认0 | 页号。 |
+| size | 1..100，默认20 | 每页数量。 |
+
+`data={content,count,page,size}`；content每项为 `{id,orderId,buyer,seller,amount,reason,status,attempts,createTime,updateTime}`。金额单位分，时间单位秒，订单ID与金额保持Long精度。按createTime倒序、id倒序稳定排序，count为相同过滤范围的总数。列表不返回地址、支付渠道密钥或用户资料。身份取自认证上下文，user/owner/seller账号参数不能扩大范围。count与本页在同一只读快照中查询。
+
+例：`GET /refunds?status=REQUESTED&page=0&size=20`列出自己的待审核申请；读取content中的id后，调用现有`GET /refunds/{id}`、`POST /refunds/{id}/approve|reject|retry`。
+
+### GET `/order/{id}/refunds`
+
+买家、对应卖家或ADMIN按订单读取现有完整Refund对象（与`GET /refunds/{id}`一致）。有权访问且尚未申请时返回HTTP200、`success=true,data=null`；无权访问仍返回403，订单不存在404，非法ID400，未登录401。不要将无申请当作服务错误。
+
+前端销售订单详情据此显示查看/处理售后入口，卖家工作台通过列表展示待处理申请；不再依赖买家传递UUID。申请状态来自退款表，不能用订单refundStatus的NONE/SIMULATED_REFUNDED判断是否REQUESTED。当前无WebSocket/消息推送，刷新列表或进入工作台即可获取持久化的新申请。

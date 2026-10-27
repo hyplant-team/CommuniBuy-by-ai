@@ -8,9 +8,9 @@ parser.add_argument('--task', choices=('test', 'integrationTest'), help='Inspect
 args = parser.parse_args()
 required = {
     'test': {'BusinessRulesTest', 'TestDatabasePolicyTest', 'SafeDiagnosticsTest', 'RevocationCleanupTest'},
-    'integrationTest': {'AuthPolicyTest', 'BackendIntegrationTest', 'CommerceIntegrationTest', 'FinanceIntegrationTest', 'MigrationTest', 'ReliabilityIntegrationTest', 'ReviewLockIntegrationTest', 'RevocationCleanupIntegrationTest'},
+    'integrationTest': {'AuthPolicyTest', 'BackendIntegrationTest', 'CommerceIntegrationTest', 'FinanceIntegrationTest', 'RefundDiscoveryIntegrationTest', 'MigrationTest', 'ReliabilityIntegrationTest', 'ReviewLockIntegrationTest', 'RevocationCleanupIntegrationTest'},
 }
-minimum = {'test': 16, 'integrationTest': 84}
+minimum = {'test': 16, 'integrationTest': 89}
 totals = {k: 0 for k in ('tests', 'failures', 'errors', 'skipped')}
 seen = set()
 base = Path(__file__).resolve().parents[1] / 'app/build/test-results'

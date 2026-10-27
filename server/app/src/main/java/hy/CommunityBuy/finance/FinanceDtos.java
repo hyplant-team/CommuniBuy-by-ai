@@ -33,6 +33,18 @@ public final class FinanceDtos {
 
   public record RefundRequest(@NotBlank @Size(max = 255) String reason) {}
 
+  public record RefundEntry(
+      String id,
+      long orderId,
+      String buyer,
+      String seller,
+      long amount,
+      String reason,
+      String status,
+      int attempts,
+      long createTime,
+      long updateTime) {}
+
   public record ReviewRequest(
       @NotNull @Positive Long itemId,
       @NotNull @Min(1) @Max(5) Integer rating,

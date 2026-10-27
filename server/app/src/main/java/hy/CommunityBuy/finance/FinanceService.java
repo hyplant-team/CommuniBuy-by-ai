@@ -48,6 +48,68 @@ public class FinanceService {
     return r;
   }
 
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public PageView<RefundEntry> refunds(
+      Actor a, String scope, String status, Long orderId, int page, int size) {
+    var conditions = new ArrayList<String>();
+    var parameters = new ArrayList<Object>();
+    // Scope always comes from the authenticated actor, never a caller-supplied account ID.
+    switch (scope) {
+      case "seller" -> {
+        conditions.add("o.owner_id=?");
+        parameters.add(a.id());
+      }
+      case "buyer" -> {
+        conditions.add("o.user_id=?");
+        parameters.add(a.id());
+      }
+      case "all" -> a.requireAdmin();
+      default -> throw BusinessException.bad("Invalid refund scope");
+    }
+    if (status != null) {
+      if (!Set.of("REQUESTED", "APPROVED", "FAILED", "SUCCEEDED", "REJECTED").contains(status))
+        throw BusinessException.bad("Invalid refund status");
+      conditions.add("r.status=?");
+      parameters.add(status);
+    }
+    if (orderId != null) {
+      conditions.add("r.order_id=?");
+      parameters.add(orderId);
+    }
+    String from = " from refunds r join orders o on o.id=r.order_id";
+    if (!conditions.isEmpty()) from += " where " + String.join(" and ", conditions);
+    long count = jdbc.queryForObject("select count(*)" + from, Long.class, parameters.toArray());
+    parameters.add(size);
+    parameters.add((long) page * size);
+    var content =
+        jdbc.query(
+            "select r.*,o.user_id as buyer,o.owner_id as seller"
+                + from
+                + " order by r.create_time desc,r.id desc limit ? offset ?",
+            (rs, n) ->
+                new RefundEntry(
+                    rs.getString("id"),
+                    rs.getLong("order_id"),
+                    rs.getString("buyer"),
+                    rs.getString("seller"),
+                    rs.getLong("amount"),
+                    rs.getString("reason"),
+                    rs.getString("status"),
+                    rs.getInt("attempts"),
+                    rs.getLong("create_time"),
+                    rs.getLong("update_time")),
+            parameters.toArray());
+    return new PageView<>(content, count, page, size);
+  }
+
+  @Transactional(readOnly = true)
+  public Refund refundForOrder(Actor a, long orderId) {
+    // Check the order even when no refund exists, so absence cannot bypass ownership checks.
+    orders.get(a, orderId);
+    var ids = jdbc.queryForList("select id from refunds where order_id=?", String.class, orderId);
+    return ids.isEmpty() ? null : book.refund(ids.getFirst());
+  }
+
   public Refund request(Actor a, long orderId, String reason) {
     return orders.refundOperation(a, orderId, "request", reason);
   }

@@ -44,6 +44,23 @@ public class FinanceController {
     return Api.ok(finance.request(Actor.current(), id, r.reason()));
   }
 
+  @GetMapping("/refunds")
+  public Api<PageView<RefundEntry>> refunds(
+      @RequestParam(defaultValue = "seller") @Pattern(regexp = "seller|buyer|all") String scope,
+      @RequestParam(required = false)
+          @Pattern(regexp = "REQUESTED|APPROVED|FAILED|SUCCEEDED|REJECTED")
+          String status,
+      @RequestParam(required = false) @Positive Long orderId,
+      @RequestParam(defaultValue = "0") @Min(0) @Max(1000000) int page,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+    return Api.ok(finance.refunds(Actor.current(), scope, status, orderId, page, size));
+  }
+
+  @GetMapping("/order/{id}/refunds")
+  public Api<Refund> refundForOrder(@PathVariable @Positive long id) {
+    return Api.ok(finance.refundForOrder(Actor.current(), id));
+  }
+
   @GetMapping("/refunds/{id}")
   public Api<Refund> refund(@PathVariable @Pattern(regexp = "[a-f0-9-]{36}") String id) {
     return Api.ok(finance.refund(Actor.current(), id));
