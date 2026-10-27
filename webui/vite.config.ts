@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     define: { __SINGLE_FILE__: 'false' },
     plugins: [vue()],
 
-    base: './',
+    base: '/',
     build: {
       target: 'es2020',
       outDir: 'dist',
