@@ -4,7 +4,7 @@ import { ApiError } from '../api/http'
 export function errorText(error: unknown): string {
   const text = error instanceof Error ? error.message : '操作失败，请稍后重试'
   return error instanceof ApiError
-    ? `${text}${error.retryAfter ? `（Retry-After：${error.retryAfter}）` : ''}${error.traceId ? ` · 排查编号 ${error.traceId}` : ''}`
+    ? `${text}${error.retryAfter && /^\d+$/.test(error.retryAfter) ? `（请在 ${error.retryAfter} 秒后重试）` : ''}`
     : text
 }
 export function useTask() {

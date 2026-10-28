@@ -6,10 +6,10 @@ import { useAuth } from '../stores/auth'
 import { useTask } from '../composables/useTask'
 import { useClock } from '../composables/useClock'
 import { confirmAction } from '../utils/confirm'
-import { money, dateTime, orderLabels, requireText } from '../utils/format'
+import { money, dateTime, orderLabels, refundLabels, requireText } from '../utils/format'
 import { numericId } from '../utils/json'
 import { orderPermissions } from '../utils/permissions'
-import type { DetailedOrder } from '../types/api'
+import type { DetailedOrder, Refund } from '../types/api'
 import PageHeading from '../components/PageHeading.vue'
 import ErrorNotice from '../components/ErrorNotice.vue'
 import OrderLines from '../components/OrderLines.vue'
@@ -19,14 +19,30 @@ const auth = useAuth()
 const now = useClock()
 const id = String(route.params.id)
 const task = useTask()
+const refundTask = useTask()
 const write = useTask()
 const detail = ref<DetailedOrder | null>(null)
+const existingRefund = ref<Refund | null>(null)
+const refundKnown = ref(false)
 const address = ref('')
 const reason = ref('')
 const reviewItem = ref('')
 const rating = ref(5)
 const comment = ref('')
-const refundLookup = ref('')
+const ordersPath = computed(() =>
+  auth.isAdmin
+    ? '/admin/orders'
+    : detail.value?.order.owner === auth.user?.id
+      ? '/seller/orders'
+      : '/orders'
+)
+const refundsPath = computed(() =>
+  auth.isAdmin
+    ? '/admin/refunds'
+    : detail.value?.order.owner === auth.user?.id
+      ? '/seller/refunds'
+      : '/refunds'
+)
 const permissions = computed(() =>
   detail.value ? orderPermissions(detail.value.order, auth.user!, now.value) : null
 )
@@ -39,13 +55,23 @@ async function load() {
     detail.value = await api.order(id)
     address.value = detail.value.order.address || ''
     reviewItem.value ||= detail.value.lines[0]?.itemId || ''
+    await loadRefund()
+  })
+}
+async function loadRefund() {
+  refundKnown.value = false
+  await refundTask.run(async () => {
+    existingRefund.value = await api.orderRefund(id)
+    refundKnown.value = true
   })
 }
 async function action(name: string) {
   if (
     !(await confirmAction(
       name === 'cancel'
-        ? '确认取消订单？已付款待发货订单会执行全额模拟退款，实际结果以服务端状态为准。'
+        ? detail.value?.order.status === 1
+          ? '确认取消订单并全额模拟退款？退款结果以服务端状态为准。'
+          : '确认取消这笔订单？'
         : name === 'receive'
           ? '请确认已收到商品。确认后订单将完成。'
           : '确认本订单已发货？'
@@ -91,16 +117,10 @@ async function review() {
     comment.value = ''
   }, '评价已提交，每笔订单的同一商品只能评价一次')
 }
-function lookupRefund() {
-  void write.run(async () => {
-    if (!/^[a-f0-9-]{36}$/.test(refundLookup.value)) throw new Error('请输入正确的售后编号')
-    await router.push(`/refunds/${refundLookup.value}`)
-  })
-}
 onMounted(load)
 </script>
 <template>
-  <RouterLink to="/orders" class="back-link">← 返回订单</RouterLink
+  <RouterLink :to="ordersPath" class="back-link">← 返回订单</RouterLink
   ><PageHeading :title="`订单 ${id}`" description="订单中的商品信息与金额以成交快照为准。"
     ><el-button :loading="task.busy.value" @click="load">刷新状态</el-button></PageHeading
   ><ErrorNotice :message="task.error.value" @retry="load" /><ErrorNotice
@@ -231,7 +251,7 @@ onMounted(load)
             售后处理中可能暂不可发货或收货，请以最新处理结果为准。
           </p>
         </section>
-        <section v-if="permissions.refund" class="panel">
+        <section v-if="permissions.refund && refundKnown && !existingRefund" class="panel">
           <h2>申请全额售后</h2>
           <p class="muted small">每单仅支持一次全额申请；同一原因重试会返回原申请。</p>
           <el-input
@@ -245,14 +265,22 @@ onMounted(load)
           >
         </section>
         <section class="panel">
-          <h3>查询已有售后</h3>
-          <form @submit.prevent="lookupRefund">
-            <el-input
-              v-model="refundLookup"
-              placeholder="输入售后编号"
-              aria-label="售后编号"
-            /><el-button native-type="submit" style="margin-top: 12px">查看售后</el-button>
-          </form>
+          <h3>订单售后</h3>
+          <ErrorNotice :message="refundTask.error.value" @retry="loadRefund" />
+          <p v-if="refundTask.busy.value" class="muted small">正在查询售后申请…</p>
+          <template v-else-if="refundKnown && existingRefund">
+            <el-tag effect="plain">{{
+              refundLabels[existingRefund.status] || existingRefund.status
+            }}</el-tag>
+            <p class="body-text">{{ existingRefund.reason }}</p>
+            <RouterLink :to="`/refunds/${existingRefund.id}`">
+              <el-button type="primary">查看 / 处理售后</el-button>
+            </RouterLink>
+          </template>
+          <p v-else-if="refundKnown" class="muted small">该订单暂未申请售后。</p>
+          <p style="margin: 16px 0 0">
+            <RouterLink :to="refundsPath">查看售后列表 →</RouterLink>
+          </p>
         </section>
       </div>
     </div></template

@@ -127,6 +127,7 @@ async function backend(page: Page) {
     if (path === `/item/${itemId}/reviews`) return ok(route, paged([]))
     if (path === '/order') return ok(route, paged([currentOrder]))
     if (path === `/order/${orderId}/details`) return ok(route, { order: currentOrder, lines })
+    if (path === `/order/${orderId}/refunds` && method === 'GET') return ok(route, null)
     if (path === '/payments' && method === 'POST')
       return ok(route, {
         id: paymentId,
@@ -297,6 +298,74 @@ test('multi-item totals come from the server and simulator payment keeps buyer p
   await expect(page.getByText('待发货', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '确认发货' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '取消订单' })).toHaveCount(0)
+  expect(mock.unhandled).toEqual([])
+})
+
+test('confirmation dialogs stay compact and centered across actions and screen sizes', async ({
+  page,
+}) => {
+  const mock = await backend(page)
+  let deletes = 0
+  await page.route('**/api/v1/cart', (route) =>
+    ok(route, {
+      version: 7,
+      lines: [
+        {
+          itemId: BigInt(itemId),
+          quantity: 1,
+          selected: true,
+          name: item.name,
+          price: 990,
+          stock: 30,
+          status: 0,
+          startTime: timestamp - 100,
+          endTime: null,
+        },
+      ],
+    })
+  )
+  await page.route(`**/api/v1/cart/${itemId}`, async (route) => {
+    deletes++
+    await ok(route, { version: 8, lines: [] })
+  })
+  await login(page)
+  await page.goto('/cart')
+  for (const width of [1920, 1280, 768, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.getByRole('button', { name: '移除', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect
+      .poll(async () => {
+        const rect = await page.locator('.el-message-box').boundingBox()
+        return (
+          !!rect &&
+          Math.abs(rect.width - Math.min(520, width - 36)) < 2 &&
+          Math.abs(rect.x + rect.width / 2 - width / 2) < 2
+        )
+      })
+      .toBe(true)
+    if (width === 1280)
+      await page.screenshot({
+        path: 'test-results/compact-confirm-desktop.png',
+        animations: 'disabled',
+      })
+    if (width === 320)
+      await page.screenshot({
+        path: 'test-results/compact-confirm-mobile.png',
+        animations: 'disabled',
+      })
+    await dialog.getByRole('button', { name: '返回', exact: true }).click()
+    await expect(dialog).toHaveCount(0)
+  }
+  expect(deletes).toBe(0)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto(`/orders/${orderId}`)
+  await page.getByRole('button', { name: '取消订单', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText('确认取消这笔订单？')
+  await expect(page.getByRole('dialog')).not.toContainText('退款')
+  expect((await page.locator('.el-message-box').boundingBox())!.width).toBeLessThanOrEqual(520)
+  await page.getByRole('dialog').getByRole('button', { name: '返回', exact: true }).click()
   expect(mock.unhandled).toEqual([])
 })
 

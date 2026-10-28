@@ -58,6 +58,9 @@ async function logout() {
           <RouterLink to="/orders" :class="{ active: route.path.startsWith('/orders') }"
             >我的订单</RouterLink
           >
+          <RouterLink to="/refunds" :class="{ active: route.path.startsWith('/refunds') }"
+            >我的售后</RouterLink
+          >
           <RouterLink to="/seller/items" :class="{ active: route.path.startsWith('/seller') }"
             >团购工作台</RouterLink
           >
@@ -86,6 +89,7 @@ async function logout() {
     <div v-if="auth.user && route.path.startsWith('/seller')" class="subnav">
       <RouterLink to="/seller/items">我发起的团购</RouterLink
       ><RouterLink to="/seller/orders">销售订单</RouterLink
+      ><RouterLink to="/seller/refunds">售后管理</RouterLink
       ><RouterLink to="/settlements">内部结算</RouterLink>
     </div>
     <div v-if="auth.user && route.path.startsWith('/admin')" class="subnav">
@@ -94,6 +98,7 @@ async function logout() {
       ><RouterLink to="/admin/categories">分类管理</RouterLink
       ><RouterLink to="/admin/items">全部团购</RouterLink
       ><RouterLink to="/admin/orders">全部订单</RouterLink
+      ><RouterLink to="/admin/refunds">全部售后</RouterLink
       ><RouterLink to="/admin/audit">操作审计</RouterLink>
     </div>
     <main :class="isAuthPage ? 'auth-main' : 'page-main'">
