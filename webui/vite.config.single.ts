@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
         : undefined,
     },
 
-    publicDir: 'public-single',
+    publicDir: 'public',
     test: {
       include: ['tests/unit/**/*.test.ts'],
       environment: 'node',

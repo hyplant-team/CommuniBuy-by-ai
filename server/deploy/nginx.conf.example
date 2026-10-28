@@ -51,6 +51,9 @@ http {
         }
         location "/" {
             index "index.html";
+            if ($uri ~* "^/favicon\.ico$") {
+                return 307 /favicon.svg;
+            }
             root "C:\wwwroot";
             try_files $uri /index.html;
         }
