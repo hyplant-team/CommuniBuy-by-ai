@@ -18,4 +18,12 @@ window.addEventListener('communibuy:unauthorized', () => {
   if (!router.currentRoute.value.meta.public)
     void router.replace({ path: '/login', query: { return: path, expired: '1' } })
 })
-app.mount('#app')
+void router
+  .isReady()
+  .then(() => {
+    app.mount('#app')
+    window.dispatchEvent(new Event('communibuy:ready'))
+  })
+  .catch(() => {
+    window.dispatchEvent(new Event('communibuy:startup-error'))
+  })

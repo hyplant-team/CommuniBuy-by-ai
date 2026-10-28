@@ -26,6 +26,13 @@ const router = createRouter({
     { path: '/cart', component: () => import('../views/CartView.vue') },
     { path: '/checkouts/:id', component: () => import('../views/CheckoutView.vue') },
     { path: '/payments/:id', component: () => import('../views/PaymentView.vue') },
+    { path: '/refunds', component: () => import('../views/RefundsView.vue') },
+    { path: '/seller/refunds', component: () => import('../views/RefundsView.vue') },
+    {
+      path: '/admin/refunds',
+      component: () => import('../views/RefundsView.vue'),
+      meta: { admin: true },
+    },
     { path: '/refunds/:id', component: () => import('../views/RefundView.vue') },
     { path: '/settlements/:id?', component: () => import('../views/SettlementView.vue') },
     { path: '/profile', component: () => import('../views/ProfileView.vue') },

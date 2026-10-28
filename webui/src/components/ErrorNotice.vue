@@ -1,6 +1,5 @@
 <script setup lang="ts">
-defineProps<{ message: string }>()
-defineEmits<{ retry: [] }>()
+defineProps<{ message: string; onRetry?: () => void }>()
 </script>
 <template>
   <el-alert
@@ -10,8 +9,8 @@ defineEmits<{ retry: [] }>()
     show-icon
     :closable="false"
     class="error-notice"
-    ><template v-if="$attrs.onRetry" #default
-      ><el-button size="small" @click="$emit('retry')">重新加载</el-button></template
+    ><template v-if="onRetry" #default
+      ><el-button size="small" @click="onRetry">重新加载</el-button></template
     ></el-alert
   >
 </template>

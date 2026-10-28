@@ -11,6 +11,7 @@ import type {
   Page,
   Payment,
   Refund,
+  RefundEntry,
   Review,
   Settlement,
   Stats,
@@ -62,6 +63,8 @@ export const api = {
   requestRefund: (id: string, reason: string) =>
     request<Refund>('POST', `/order/${id}/refunds`, { reason }),
   refund: (id: string) => request<Refund>('GET', `/refunds/${id}`),
+  refunds: (params: object) => request<Page<RefundEntry>>('GET', '/refunds', undefined, params),
+  orderRefund: (id: string) => request<Refund | null>('GET', `/order/${id}/refunds`),
   refundAction: (id: string, action: string) => request<Refund>('POST', `/refunds/${id}/${action}`),
   reviews: (id: string, page = 0) =>
     request<Page<Review>>('GET', `/item/${id}/reviews`, undefined, { page, size: 10 }),

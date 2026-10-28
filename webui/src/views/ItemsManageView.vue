@@ -49,6 +49,8 @@ onMounted(load)
     title="我发起的团购"
     description="把你发现的好物，分享给身边的邻居。"
     eyebrow="YOUR GOOD THINGS"
+    ><RouterLink to="/seller/orders"><el-button size="large">销售订单</el-button></RouterLink
+    ><RouterLink to="/seller/refunds"><el-button size="large">售后管理</el-button></RouterLink
     ><RouterLink to="/seller/items/new"
       ><el-button type="primary" size="large">＋ 发起团购</el-button></RouterLink
     ></PageHeading

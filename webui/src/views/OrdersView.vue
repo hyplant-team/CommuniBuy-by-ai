@@ -38,7 +38,10 @@ onMounted(load)
       seller ? '查看邻居的订单，及时安排履约。' : '从下单到收货，每一份好物都有迹可循。'
     "
     eyebrow="EVERY GOOD THING HAS A STORY"
-  />
+    ><RouterLink :to="seller ? '/seller/refunds' : '/refunds'"
+      ><el-button>{{ seller ? '售后管理' : '我的售后' }}</el-button></RouterLink
+    ></PageHeading
+  >
   <section class="panel">
     <div class="toolbar">
       <el-select
@@ -78,9 +81,15 @@ onMounted(load)
         ></el-table-column
       ><el-table-column label="创建时间" min-width="170"
         ><template #default="{ row }">{{ dateTime(row.createTime) }}</template></el-table-column
-      ><el-table-column label="操作" width="90"
+      ><el-table-column label="操作" min-width="165"
         ><template #default="{ row }"
-          ><RouterLink :to="`/orders/${row.id}`">查看详情 →</RouterLink></template
+          ><div class="inline-actions">
+            <RouterLink :to="`/orders/${row.id}`">查看详情 →</RouterLink>
+            <RouterLink
+              :to="{ path: seller ? '/seller/refunds' : '/refunds', query: { orderId: row.id } }"
+              >查看售后</RouterLink
+            >
+          </div></template
         ></el-table-column
       ><template #empty>还没有相关订单</template></el-table
     >

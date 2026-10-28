@@ -125,6 +125,8 @@ export default defineConfig(({ mode }) => {
             '/api': {
               target: env.API_PROXY_TARGET,
               changeOrigin: true,
+              // Opt in only for a trusted self-signed development endpoint.
+              secure: env.API_PROXY_INSECURE !== 'true',
               configure(proxy) {
                 proxy.on('proxyReq', (proxyReq, request) => {
                   // Browser -> Vite is same-origin. Do not forward that local

@@ -468,7 +468,9 @@ button {
   text-align: center;
 }
 .el-message-box {
-  max-width: calc(100vw - 36px);
+  max-width: min(520px, calc(100vw - 36px));
+  padding: 22px 24px 20px;
+  border-radius: 14px;
 }
 @media (min-width: 1500px) {
   .auth-main {

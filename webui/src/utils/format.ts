@@ -36,6 +36,13 @@ export const orderLabels: Record<number, string> = {
   2: '待收货',
   3: '已完成',
 }
+export const refundLabels: Record<string, string> = {
+  REQUESTED: '待审核',
+  APPROVED: '退款处理中',
+  FAILED: '退款失败',
+  SUCCEEDED: '已退款',
+  REJECTED: '已拒绝',
+}
 export function pageCount(count: string): number {
   const n = Number(count)
   return Number.isSafeInteger(n) && n >= 0 ? n : 0

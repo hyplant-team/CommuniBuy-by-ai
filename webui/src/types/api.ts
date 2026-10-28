@@ -131,6 +131,19 @@ export interface Refund {
   createTime: number
   updateTime: number
 }
+export type RefundScope = 'seller' | 'buyer' | 'all'
+export interface RefundEntry {
+  id: string
+  orderId: Id
+  buyer: string
+  seller: string
+  amount: Cents
+  reason: string
+  status: string
+  attempts: number
+  createTime: number
+  updateTime: number
+}
 export interface Settlement {
   id: string
   seller: string

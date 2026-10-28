@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { Envelope } from '../types/api'
 import { encodeJson, parseApiJson } from '../utils/json'
+import { serverErrorMessage } from '../utils/apiMessages'
 
 export class ApiError extends Error {
   constructor(
@@ -42,6 +43,19 @@ http.interceptors.request.use((config) => {
   if (config.data !== undefined) config.headers.set('Content-Type', 'application/json')
   return config
 })
+function connectionErrorMessage(method: string, url: string): string {
+  const action = method.toUpperCase()
+  if (action === 'POST' && url === '/auth') return '暂时无法连接登录服务，请检查连接后重试。'
+  if (action === 'POST' && url === '/auth/register')
+    return '暂时无法连接注册服务，请检查连接后重试。'
+  if (action === 'GET' && url === '/auth') return '暂时无法验证登录状态，请检查连接后重试。'
+  if (action === 'POST' && url === '/order')
+    return '订单提交结果尚未确认，请先核对订单；如需重试，请沿用原请求。'
+  if (action === 'POST' && url === '/checkout')
+    return '结算结果尚未确认，请先核对订单；如需重试，请沿用原请求。'
+  if (action === 'GET' || action === 'HEAD') return '暂时无法加载数据，请检查连接后重试。'
+  return '暂时无法连接服务，请检查连接后重试。'
+}
 const backoff = new Map<string, number>()
 export async function request<T>(
   method: string,
@@ -52,7 +66,7 @@ export async function request<T>(
 ): Promise<T> {
   const endpoint = `${tokenStorage.get() || 'guest'}:${method}:${url}`
   const delay = Math.ceil(((backoff.get(endpoint) || 0) - Date.now()) / 1000)
-  if (delay > 0) throw new ApiError(`请等待 ${delay} 秒后再试`, 429, '', String(delay))
+  if (delay > 0) throw new ApiError('操作过于频繁', 429, '', String(delay))
   try {
     const response = await http.request<Envelope<T>>({
       method,
@@ -65,7 +79,11 @@ export async function request<T>(
     if (!body || typeof body.success !== 'boolean')
       throw new ApiError('服务响应格式不匹配，请核对后端版本与代理地址')
     if (!body.success)
-      throw new ApiError(body.message || '操作未完成', response.status, body.traceId)
+      throw new ApiError(
+        serverErrorMessage(body.message, method, url) || '操作未完成',
+        response.status,
+        body.traceId
+      )
     return body.data
   } catch (error) {
     if (error instanceof ApiError) throw error
@@ -84,12 +102,12 @@ export async function request<T>(
         if (Number.isFinite(until)) backoff.set(endpoint, until)
       }
       const message =
-        body?.message ||
+        serverErrorMessage(body?.message, method, url) ||
         (status === 429
           ? '操作过于频繁，请按提示稍后重试'
           : status
             ? `请求失败（${status}），请核对服务配置`
-            : '暂时无法连接服务。若刚提交订单，结果可能尚未确认，请沿用原请求重试。')
+            : connectionErrorMessage(method, url))
       throw new ApiError(
         message,
         status,
